@@ -44,6 +44,22 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
  .pgf-summary{padding:15px}
 }
 @media(prefers-reduced-motion:no-preference){.btn.viz-tile{transition:transform .12s ease,border-color .12s ease}.btn.viz-tile:active{transform:scale(.985)}}
+
+.pgf-planner-editor,.pgf-plan-board{padding:18px;margin:14px 0}
+.pgf-plan-board h2{margin:0 0 10px}
+.pgf-plan-board h3{margin:16px 0 6px}
+.pgf-plan-board ol,.pgf-plan-board ul{margin:6px 0 10px;padding-left:24px}
+.pgf-plan-board li{margin:4px 0}
+.pgf-plan-materials{background:var(--soft);border-radius:10px;padding:10px;margin-top:8px}
+.pgf-plan-actions{margin:10px 0}
+.pgf-plan-message{min-height:1.4em;margin-top:8px}
+.pgf-plan-empty{color:var(--muted);font-style:italic}
+@media print{
+ .viz-controls,.pgf-result-line,.pgf-summary,.pgf-planner-editor,.pgf-grid,.site-footer{display:none!important}
+ body{background:#fff}
+ .site-header{background:#fff;color:#000;padding:0 0 16px}
+ .pgf-plan-board{border:0;box-shadow:none;padding:0}
+}
 </style>
 </head>
 <body>
@@ -92,7 +108,37 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
     <p><strong>Sicurezza:</strong> <span id="pgf-summary-safety"></span></p>
     <p class="text-small text-muted" id="pgf-summary-materials"></p>
   </div>
+  <div class="card pgf-planner-editor" aria-label="Pianificazione del gioco selezionato">
+    <strong>Pianifica questo gioco</strong>
+    <div class="viz-controls">
+      <label class="form-label" for="pgf-plan-event">Occasione
+        <select class="form-select" id="pgf-plan-event">
+          <option value="">Non selezionato</option>
+          <option value="evening1">Sera 1</option>
+          <option value="hunt">Caccia al tesoro</option>
+          <option value="morningFinal">Finale comune della mattina</option>
+          <option value="evening2">Sera 2</option>
+        </select>
+      </label>
+      <label class="form-label" id="pgf-plan-slot-wrap" for="pgf-plan-slot">Ordine
+        <input class="form-control" id="pgf-plan-slot" type="number" min="1" step="1" inputmode="numeric">
+      </label>
+      <button class="btn btn-primary" id="pgf-plan-save" type="button">Salva assegnazione</button>
+      <button class="btn" id="pgf-plan-remove" type="button">Rimuovi</button>
+    </div>
+    <div class="pgf-plan-message text-small" id="pgf-plan-message" aria-live="polite"></div>
+  </div>
   <div class="viz-grid pgf-grid" id="pgf-grid" aria-label="Giochi compatibili"></div>
+  <section class="card pgf-plan-board" aria-label="Piano delle attività">
+    <h2>Piano delle attività</h2>
+    <div class="viz-row pgf-plan-actions">
+      <button class="btn btn-primary" id="pgf-plan-copy-link" type="button">Copia link del piano</button>
+      <button class="btn" id="pgf-plan-copy-text" type="button">Copia elenco e materiali</button>
+      <button class="btn" id="pgf-plan-print" type="button">Stampa</button>
+      <button class="btn btn-ghost" id="pgf-plan-reset" type="button">Azzera piano</button>
+    </div>
+    <div id="pgf-plan-output"></div>
+  </section>
 </div>
 <script>
 (() => {
@@ -108,6 +154,53 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
   const grid = root.querySelector("#pgf-grid");
   const count = root.querySelector("#pgf-count");
   let selectedCode = null;
+  const planKey = "prisma-plan-v1";
+  let plan = {};
+
+  function loadPlan() {
+    try { plan = JSON.parse(localStorage.getItem(planKey) || "{}") || {}; }
+    catch (_) { plan = {}; }
+  }
+
+  function persistPlan() {
+    localStorage.setItem(planKey, JSON.stringify(plan));
+  }
+
+  function encodePlan() {
+    const bytes = new TextEncoder().encode(JSON.stringify(plan));
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function loadPlanFromHash() {
+    const match = location.hash.match(/^#plan=([A-Za-z0-9_-]+)$/);
+    if (!match) return;
+    try {
+      let encoded = match[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (encoded.length % 4) encoded += "=";
+      const binary = atob(encoded);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      const imported = JSON.parse(new TextDecoder().decode(bytes));
+      if (imported && typeof imported === "object") {
+        plan = imported;
+        persistPlan();
+      }
+    } catch (_) {
+      root.querySelector("#pgf-plan-message").textContent = "Il link del piano non è leggibile.";
+    }
+  }
+
+  function eventTitle(event) {
+    return ({ evening1: "Sera 1", hunt: "Caccia al tesoro", morningFinal: "Finale comune della mattina", evening2: "Sera 2" })[event] || "";
+  }
+
+  function shortAssignment(assignment) {
+    if (!assignment) return "";
+    if (assignment.event === "hunt") return "Stazione " + assignment.slot;
+    if (assignment.event === "morningFinal") return "Finale mattina";
+    return eventTitle(assignment.event) + " · " + assignment.slot;
+  }
 
   function matches(game) {
     return (controls.env.value === "Tutti" || game.env.includes(controls.env.value)) &&
@@ -126,6 +219,7 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
     root.querySelector("#pgf-summary-scale").textContent = game.scale;
     root.querySelector("#pgf-summary-safety").textContent = game.safety;
     root.querySelector("#pgf-summary-materials").textContent = "Materiali: " + game.materials;
+    syncPlanEditor(game);
     grid.querySelectorAll("button").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.code === selectedCode)));
   }
 
@@ -146,7 +240,8 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
       button.type = "button";
       button.className = "btn viz-tile";
       button.dataset.code = game.code;
-      button.textContent = game.name;
+      const assignment = plan[game.code];
+      button.textContent = game.name + (assignment ? " · " + shortAssignment(assignment) : "");
       button.setAttribute("aria-label", game.code + ": " + game.name);
       button.setAttribute("aria-pressed", String(game.code === selectedCode));
       button.addEventListener("click", () => show(game));
@@ -154,7 +249,172 @@ body{margin:0;background:#f4f5f8;color:var(--ink);font-family:system-ui,-apple-s
     });
   }
 
+  function syncPlanEditor(game) {
+    const assignment = plan[game.code] || { event: "", slot: "" };
+    const eventControl = root.querySelector("#pgf-plan-event");
+    const slotControl = root.querySelector("#pgf-plan-slot");
+    eventControl.value = assignment.event || "";
+    slotControl.value = assignment.slot || "";
+    updateSlotControl();
+  }
+
+  function updateSlotControl() {
+    const event = root.querySelector("#pgf-plan-event").value;
+    const wrap = root.querySelector("#pgf-plan-slot-wrap");
+    const input = root.querySelector("#pgf-plan-slot");
+    const needsSlot = event === "evening1" || event === "hunt" || event === "evening2";
+    wrap.hidden = !needsSlot;
+    if (event === "hunt") {
+      wrap.firstChild.textContent = "Stazione (1–8) ";
+      input.min = "1";
+      input.max = "8";
+    } else {
+      wrap.firstChild.textContent = "Ordine di esecuzione ";
+      input.min = "1";
+      input.removeAttribute("max");
+    }
+  }
+
+  function saveAssignment() {
+    if (!selectedCode) return;
+    const event = root.querySelector("#pgf-plan-event").value;
+    const input = root.querySelector("#pgf-plan-slot");
+    const message = root.querySelector("#pgf-plan-message");
+    if (!event) {
+      delete plan[selectedCode];
+      persistPlan();
+      renderPlan();
+      render();
+      message.textContent = "Gioco rimosso dalla pianificazione.";
+      return;
+    }
+    const needsSlot = event !== "morningFinal";
+    const slot = needsSlot ? Number(input.value) : 0;
+    if (needsSlot && (!Number.isInteger(slot) || slot < 1 || (event === "hunt" && slot > 8))) {
+      message.textContent = event === "hunt" ? "Inserisci una stazione da 1 a 8." : "Inserisci un ordine numerico da 1 in poi.";
+      return;
+    }
+    const conflict = Object.entries(plan).find(([code, value]) =>
+      code !== selectedCode && value.event === event && Number(value.slot || 0) === slot
+    );
+    if (conflict) {
+      const other = games.find((game) => game.code === conflict[0]);
+      message.textContent = "Posizione già occupata da " + (other ? other.name : conflict[0]) + ". Cambia numero oppure rimuovi prima quel gioco.";
+      return;
+    }
+    plan[selectedCode] = { event, slot };
+    persistPlan();
+    renderPlan();
+    render();
+    const game = games.find((item) => item.code === selectedCode);
+    if (game) syncPlanEditor(game);
+    message.textContent = "Assegnato a " + shortAssignment(plan[selectedCode]) + ".";
+  }
+
+  function removeAssignment() {
+    if (!selectedCode) return;
+    delete plan[selectedCode];
+    persistPlan();
+    renderPlan();
+    render();
+    const game = games.find((item) => item.code === selectedCode);
+    if (game) syncPlanEditor(game);
+    root.querySelector("#pgf-plan-message").textContent = "Assegnazione rimossa.";
+  }
+
+  function assigned(event) {
+    return Object.entries(plan)
+      .filter(([, value]) => value.event === event)
+      .map(([code, value]) => ({ game: games.find((item) => item.code === code), slot: Number(value.slot || 0) }))
+      .filter((item) => item.game)
+      .sort((a, b) => a.slot - b.slot || a.game.name.localeCompare(b.game.name));
+  }
+
+  function materialsText(items) {
+    const materials = [...new Set(items.map((item) => item.game.materials).filter(Boolean))];
+    return materials.length ? materials.join(" · ") : "Nessun materiale ancora previsto.";
+  }
+
+  function listHtml(items, emptyText) {
+    if (!items.length) return '<p class="pgf-plan-empty">' + emptyText + "</p>";
+    return "<ol>" + items.map((item) => "<li><strong>" + (item.slot || "Finale") + ".</strong> " + item.game.name + "</li>").join("") + "</ol>";
+  }
+
+  function renderPlan() {
+    const evening1 = assigned("evening1");
+    const hunt = assigned("hunt");
+    const finalMorning = assigned("morningFinal");
+    const evening2 = assigned("evening2");
+    const huntBySlot = new Map(hunt.map((item) => [item.slot, item]));
+    const stationRows = Array.from({ length: 8 }, (_, index) => {
+      const slot = index + 1;
+      const item = huntBySlot.get(slot);
+      return "<li><strong>Stazione " + slot + ":</strong> " + (item ? item.game.name : '<span class="pgf-plan-empty">da assegnare</span>') + "</li>";
+    }).join("");
+    const morningItems = hunt.concat(finalMorning);
+    root.querySelector("#pgf-plan-output").innerHTML =
+      "<h3>Sera 1</h3>" + listHtml(evening1, "Nessun gioco assegnato.") +
+      '<div class="pgf-plan-materials"><strong>Materiali:</strong> ' + materialsText(evening1) + "</div>" +
+      "<h3>Mattina · caccia al tesoro</h3><ol>" + stationRows + "</ol>" +
+      "<p><strong>Finale comune:</strong> " + (finalMorning[0] ? finalMorning[0].game.name : '<span class="pgf-plan-empty">da assegnare</span>') + "</p>" +
+      '<div class="pgf-plan-materials"><strong>Materiali:</strong> ' + materialsText(morningItems) + "</div>" +
+      "<h3>Sera 2</h3>" + listHtml(evening2, "Nessun gioco assegnato.") +
+      '<div class="pgf-plan-materials"><strong>Materiali:</strong> ' + materialsText(evening2) + "</div>";
+  }
+
+  function planAsText() {
+    const lines = ["PIANO GIOCHI PRISMA 2026", ""];
+    for (const [title, event] of [["SERA 1", "evening1"], ["SERA 2", "evening2"]]) {
+      const items = assigned(event);
+      lines.push(title);
+      items.forEach((item) => lines.push(item.slot + ". " + item.game.name));
+      if (!items.length) lines.push("Nessun gioco assegnato");
+      lines.push("Materiali: " + materialsText(items), "");
+    }
+    const hunt = assigned("hunt");
+    const map = new Map(hunt.map((item) => [item.slot, item.game]));
+    lines.splice(lines.indexOf("SERA 2"), 0,
+      "MATTINA · CACCIA AL TESORO",
+      ...Array.from({ length: 8 }, (_, index) => "Stazione " + (index + 1) + ": " + (map.get(index + 1)?.name || "da assegnare")),
+      "Finale comune: " + (assigned("morningFinal")[0]?.game.name || "da assegnare"),
+      "Materiali: " + materialsText(hunt.concat(assigned("morningFinal"))),
+      ""
+    );
+    return lines.join("\n");
+  }
+
+  async function copyText(value, successMessage) {
+    try {
+      await navigator.clipboard.writeText(value);
+      root.querySelector("#pgf-plan-message").textContent = successMessage;
+    } catch (_) {
+      root.querySelector("#pgf-plan-message").textContent = "Copia non disponibile: seleziona e copia manualmente dal riepilogo.";
+    }
+  }
+
   Object.values(controls).forEach((control) => control.addEventListener("change", render));
+  root.querySelector("#pgf-plan-event").addEventListener("change", updateSlotControl);
+  root.querySelector("#pgf-plan-save").addEventListener("click", saveAssignment);
+  root.querySelector("#pgf-plan-remove").addEventListener("click", removeAssignment);
+  root.querySelector("#pgf-plan-copy-link").addEventListener("click", () =>
+    copyText(location.origin + location.pathname + "#plan=" + encodePlan(), "Link del piano copiato.")
+  );
+  root.querySelector("#pgf-plan-copy-text").addEventListener("click", () =>
+    copyText(planAsText(), "Elenco e materiali copiati.")
+  );
+  root.querySelector("#pgf-plan-print").addEventListener("click", () => window.print());
+  root.querySelector("#pgf-plan-reset").addEventListener("click", () => {
+    if (!confirm("Azzerare tutte le assegnazioni?")) return;
+    plan = {};
+    persistPlan();
+    history.replaceState(null, "", location.pathname);
+    renderPlan();
+    render();
+    root.querySelector("#pgf-plan-message").textContent = "Piano azzerato.";
+  });
+  loadPlan();
+  loadPlanFromHash();
+  renderPlan();
   render();
 })();
 </script>
