@@ -3,108 +3,166 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#17324d">
+<meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Osservazioni SM</title>
 <style>
-:root{--bg:#f3f6f8;--card:#fff;--ink:#17202a;--muted:#667085;--line:#d8dee6;--brand:#17324d;--accent:#2f6f5e;--warn:#a13d2d;--soft:#e9f1f6}
-*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-header{background:linear-gradient(135deg,#17324d,#2f6f5e);color:white;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;position:sticky;top:0;z-index:5}
-header h1{font-size:1.25rem;margin:0 0 3px} header p{margin:0;opacity:.88;font-size:.85rem}
-main{max-width:1100px;margin:auto;padding:12px 12px calc(90px + env(safe-area-inset-bottom))}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 4px 18px #1020300a}
-.setup{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px}.field{display:flex;flex-direction:column;gap:4px;font-size:.75rem;font-weight:700;color:#344054}
-input,select,button{font:inherit} input,select{width:100%;min-height:44px;border:1px solid #b8c2cc;border-radius:10px;padding:8px;background:#fff;color:var(--ink)}
-.legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.legend div{background:var(--soft);border-radius:10px;padding:8px;font-size:.78rem}.legend b{display:block;color:var(--brand);margin-bottom:2px}
-.table-wrap{overflow-x:auto}.obs-grid{display:grid;grid-template-columns:minmax(90px,1.15fr) repeat(6,minmax(82px,1fr));gap:6px;min-width:700px;align-items:stretch}
-.cell,.head{border:1px solid var(--line);border-radius:12px;background:#fff;min-height:66px;padding:6px;display:flex;align-items:center;justify-content:center;text-align:center}.head{min-height:48px;font-weight:800;background:#edf2f6;color:var(--brand);font-size:.82rem}
-.player{flex-direction:column;gap:4px}.player input{text-align:center;font-weight:800;min-height:40px}.count{font-size:1.55rem;font-weight:900;line-height:1}.tap{width:100%;min-height:66px;border:0;border-radius:12px;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;touch-action:manipulation}.tap:active{transform:scale(.98);background:#eef6f2}.tap .plus{font-size:.72rem;color:var(--muted)}
-.actions{display:flex;flex-wrap:wrap;gap:8px;position:sticky;bottom:8px;z-index:4;background:#ffffffee;backdrop-filter:blur(8px);padding:8px;border:1px solid var(--line);border-radius:15px}.actions button{border:0;border-radius:11px;padding:11px 14px;font-weight:800;min-height:46px}.primary{background:var(--accent);color:white}.secondary{background:#e9eef3;color:var(--brand)}.danger{background:#f8e8e5;color:var(--warn)}
-.status{font-size:.83rem;color:var(--muted);margin:6px 2px 0}.history{font-size:.82rem;max-height:180px;overflow:auto}.history table{width:100%;border-collapse:collapse}.history th,.history td{padding:6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-@media(max-width:760px){.setup{grid-template-columns:repeat(2,minmax(0,1fr))}.legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:430px){main{padding-left:8px;padding-right:8px}.panel{padding:9px}.legend{grid-template-columns:1fr}.actions button{flex:1 1 45%}}
+:root{
+  --bg:#eef2f6;--paper:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#dbe3ec;
+  --side:#0f172a;--side2:#172033;--accent:#7c3aed;--accent2:#5b21b6;
+  --cyan:#0ea5e9;--green:#10b981;--amber:#f59e0b;--rose:#ef4444;
+  --soft:#f8fafc;--shadow:0 10px 30px rgba(15,23,42,.08)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit}
+.app{min-height:100vh;display:grid;grid-template-columns:240px minmax(0,1fr)}
+.sidebar{background:linear-gradient(180deg,var(--side),var(--side2));color:#fff;padding:22px 16px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:11px;align-items:center}.brand-mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:grid;place-items:center;font-weight:900;box-shadow:0 8px 24px rgba(124,58,237,.35)}
+.brand h1{font-size:1rem;margin:0}.brand p{font-size:.72rem;margin:2px 0 0;color:#a8b2c4}
+.side-block{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px}.side-label{font-size:.69rem;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:8px;font-weight:800}.side-value{font-weight:800;font-size:.95rem}.side-note{font-size:.78rem;color:#cbd5e1;line-height:1.35;margin-top:4px}
+.side-spacer{flex:1}.privacy{font-size:.72rem;color:#94a3b8;line-height:1.4}
+.main{min-width:0;padding:20px 22px 92px}
+.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}.topbar h2{margin:0;font-size:1.55rem;letter-spacing:-.02em}.topbar p{margin:5px 0 0;color:var(--muted);font-size:.9rem}.badge{background:#ede9fe;color:#5b21b6;border-radius:999px;padding:7px 11px;font-size:.76rem;font-weight:800;white-space:nowrap}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+.setup{display:grid;grid-template-columns:1.2fr 1.4fr .7fr .7fr;gap:10px;padding:14px;margin-bottom:14px}.field{display:flex;flex-direction:column;gap:5px;font-size:.72rem;font-weight:800;color:#475569}.field input,.field select{min-height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:9px 11px;color:var(--ink);outline:none}.field input:focus,.field select:focus,.note-slot textarea:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px #ede9fe}
+.legend{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}.legend-item{border-radius:16px;padding:11px 10px;min-height:84px;border:1px solid var(--line);background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.04)}.legend-item b{display:block;font-size:.77rem;margin-bottom:5px}.legend-item span{font-size:.72rem;color:var(--muted);line-height:1.25;display:block}.legend-item:nth-child(1){border-top:4px solid #8b5cf6}.legend-item:nth-child(2){border-top:4px solid #0ea5e9}.legend-item:nth-child(3){border-top:4px solid #10b981}.legend-item:nth-child(4){border-top:4px solid #f59e0b}.legend-item:nth-child(5){border-top:4px solid #ef4444}.legend-item:nth-child(6){border-top:4px solid #64748b}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}.obs-card{padding:14px;overflow:hidden}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}.section-title h3{margin:0;font-size:.95rem}.section-title span{font-size:.74rem;color:var(--muted)}
+.table-wrap{overflow-x:auto;padding-bottom:2px}.obs-grid{display:grid;grid-template-columns:minmax(112px,1.15fr) repeat(6,minmax(86px,1fr));gap:7px;min-width:760px}.head{min-height:50px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;text-align:center;padding:5px;font-weight:900;color:#334155;font-size:.76rem;border:1px solid #e2e8f0}.player-cell{border:1px solid var(--line);border-radius:14px;padding:8px;background:#fff;display:flex;align-items:center}.player-cell input{width:100%;border:0;background:#f8fafc;border-radius:9px;min-height:44px;text-align:center;font-weight:900;color:#0f172a;outline:none}.tap{border:1px solid var(--line);border-radius:14px;background:#fff;min-height:78px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 10px rgba(15,23,42,.04);transition:.12s ease}.tap:active{transform:scale(.97);background:#f8fafc}.count{font-size:1.75rem;line-height:1;font-weight:950}.plus{font-size:.68rem;color:var(--muted)}
+.summary-card{padding:14px;position:sticky;top:14px}.summary-card h3{margin:0 0 10px;font-size:.95rem}.live-total{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.mini{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}.mini b{display:block;font-size:1.25rem}.mini span{font-size:.68rem;color:var(--muted)}.round-total{background:linear-gradient(135deg,#6d28d9,#2563eb);color:#fff;border-radius:16px;padding:14px;margin-bottom:12px}.round-total span{font-size:.72rem;opacity:.82}.round-total strong{display:block;font-size:1.8rem;margin-top:2px}.recent{font-size:.75rem;color:var(--muted);line-height:1.45}
+.notes{margin-top:14px;padding:14px}.notes-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.note-slot{border:1px dashed #cbd5e1;border-radius:16px;padding:10px;background:#fbfdff}.note-slot label{font-size:.72rem;font-weight:900;color:#475569;display:block;margin-bottom:6px}.note-slot textarea{width:100%;min-height:74px;resize:vertical;border:1px solid #e2e8f0;border-radius:10px;padding:8px;outline:none;background:#fff;color:#0f172a}.note-hint{font-size:.68rem;color:#94a3b8;margin-top:5px}
+.actions{position:fixed;left:262px;right:22px;bottom:12px;z-index:20;display:flex;gap:8px;flex-wrap:wrap;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:18px;padding:9px;box-shadow:0 14px 30px rgba(15,23,42,.14)}.actions button{border:0;border-radius:12px;padding:11px 14px;font-weight:850;min-height:46px;cursor:pointer}.primary{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff}.secondary{background:#eef2f7;color:#334155}.danger{background:#fee2e2;color:#991b1b}.status{margin:10px 2px 0;font-size:.78rem;color:var(--muted)}
+.history{margin-top:14px;padding:14px;font-size:.78rem;max-height:210px;overflow:auto}.history table{width:100%;border-collapse:collapse}.history th,.history td{padding:7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.history th{color:#475569;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:1100px){.legend{grid-template-columns:repeat(3,1fr)}.workspace{grid-template-columns:1fr}.summary-card{position:static}.actions{left:22px}.live-total{max-width:420px}.notes-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:14px}.brand{grid-column:1/-1}.side-spacer,.privacy{display:none}.main{padding:14px 10px 100px}.setup{grid-template-columns:1fr 1fr}.legend{grid-template-columns:1fr 1fr}.actions{left:10px;right:10px;bottom:8px}.notes-grid{grid-template-columns:1fr}.topbar{align-items:center}.topbar h2{font-size:1.25rem}}
+@media(max-width:430px){.sidebar{grid-template-columns:1fr}.setup{grid-template-columns:1fr 1fr}.legend{grid-template-columns:1fr}.badge{display:none}.actions button{flex:1 1 45%}.live-total{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
-<header><h1>Osservazioni Scienze Motorie</h1><p>Palla prigioniera standard · conteggio eventi · dati pseudonimi</p></header>
-<main>
-<section class="panel setup">
-<label class="field">Classe<input id="classe" placeholder="es. 2B"></label>
-<label class="field">Attività<select id="attivita"><option>Palla prigioniera standard</option></select></label>
-<label class="field">Round<input id="round" type="number" min="1" value="1" inputmode="numeric"></label>
-<label class="field">Squadra<input id="squadra" placeholder="es. A"></label>
-</section>
-<section class="panel">
-<div class="legend">
-<div><b>PP01 · Schiva</b>Evita il tiro con spostamento efficace.</div>
-<div><b>PP02 · Recupera</b>Recupera una palla utile e la rende giocabile.</div>
-<div><b>PP03 · Avanza</b>Usa lo spazio prima del tiro.</div>
-<div><b>PP04 · Passa</b>Serve un compagno meglio piazzato.</div>
-<div><b>PP05 · Sceglie</b>Tira su un bersaglio realmente attaccabile.</div>
-<div><b>PP06 · Presa</b>Tenta o realizza una presa al volo pertinente.</div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">SM</div><div><h1>Osservazioni SM</h1><p>Dashboard docente</p></div></div>
+    <div class="side-block"><div class="side-label">Attività</div><div class="side-value" id="sideActivity">Palla prigioniera standard</div><div class="side-note">Conteggio rapido di eventi osservabili durante il gioco.</div></div>
+    <div class="side-block"><div class="side-label">Sessione</div><div class="side-value" id="sideSession">Classe — · Round 1</div><div class="side-note">3 giocatori osservati simultaneamente.</div></div>
+    <div class="side-spacer"></div>
+    <div class="privacy">Solo codici pseudonimi. I dati restano sul dispositivo finché non vengono esportati.</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar"><div><h2>Osservazione rapida</h2><p>Un tocco = un evento osservato. Interfaccia pensata per iPad.</p></div><div class="badge">PP01–PP06</div></div>
+
+    <section class="card setup">
+      <label class="field">Classe<input id="classe" placeholder="es. 2B"></label>
+      <label class="field">Attività<select id="attivita"><option>Palla prigioniera standard</option></select></label>
+      <label class="field">Round<input id="round" type="number" min="1" value="1" inputmode="numeric"></label>
+      <label class="field">Squadra<input id="squadra" placeholder="es. A"></label>
+    </section>
+
+    <section class="legend" aria-label="Legenda descrittori">
+      <div class="legend-item"><b>PP01 · Schiva</b><span>Evita il tiro con spostamento efficace.</span></div>
+      <div class="legend-item"><b>PP02 · Recupera</b><span>Recupera una palla utile e la rende giocabile.</span></div>
+      <div class="legend-item"><b>PP03 · Avanza</b><span>Usa lo spazio disponibile prima del tiro.</span></div>
+      <div class="legend-item"><b>PP04 · Passa</b><span>Serve un compagno meglio piazzato.</span></div>
+      <div class="legend-item"><b>PP05 · Sceglie</b><span>Tira su un bersaglio realmente attaccabile.</span></div>
+      <div class="legend-item"><b>PP06 · Presa</b><span>Tenta o realizza una presa al volo pertinente.</span></div>
+    </section>
+
+    <div class="workspace">
+      <section class="card obs-card">
+        <div class="section-title"><h3>Giocatori osservati</h3><span>Tocca il comportamento quando compare</span></div>
+        <div class="table-wrap"><div class="obs-grid" id="grid"></div></div>
+      </section>
+
+      <aside class="card summary-card">
+        <h3>Riepilogo live</h3>
+        <div class="live-total" id="playerTotals"></div>
+        <div class="round-total"><span>Eventi registrati nel round</span><strong id="roundTotal">0</strong></div>
+        <div class="recent" id="lastEvent">Nessun evento registrato.</div>
+      </aside>
+    </div>
+
+    <section class="card notes">
+      <div class="section-title"><h3>Osservazioni rapide</h3><span>Tre slot facoltativi per ciò che i contatori non raccontano</span></div>
+      <div class="notes-grid">
+        <div class="note-slot"><label for="nota1">Nota 1 · episodio significativo</label><textarea id="nota1" placeholder="Es. anticipa il passaggio e crea vantaggio..."></textarea><div class="note-hint">Breve, concreta, riferita a un episodio.</div></div>
+        <div class="note-slot"><label for="nota2">Nota 2 · comportamento da rivedere</label><textarea id="nota2" placeholder="Es. recupera con ritardo e lascia arretrare i bersagli..."></textarea><div class="note-hint">Utile per controeventi o errori ricorrenti.</div></div>
+        <div class="note-slot"><label for="nota3">Nota 3 · contesto / eccezione</label><textarea id="nota3" placeholder="Es. ruolo particolare, cambio squadra, jolly..."></textarea><div class="note-hint">Per spiegare situazioni non standard.</div></div>
+      </div>
+    </section>
+
+    <div class="status" id="status">Pronto. I dati restano su questo dispositivo finché non li esporti.</div>
+
+    <section class="card history"><strong>Ultimi round salvati</strong><div id="history"></div></section>
+  </main>
 </div>
-</section>
-<section class="panel table-wrap">
-<div class="obs-grid" id="grid"></div>
-</section>
+
 <section class="actions">
-<button class="secondary" id="undo">↶ Annulla ultimo</button>
-<button class="danger" id="reset">Azzera round</button>
-<button class="primary" id="save">Salva round</button>
-<button class="secondary" id="csv">Esporta CSV</button>
+  <button class="secondary" id="undo">↶ Annulla ultimo</button>
+  <button class="danger" id="reset">Azzera round</button>
+  <button class="primary" id="save">Salva round</button>
+  <button class="secondary" id="csv">Esporta CSV</button>
 </section>
-<div class="status" id="status">I dati restano su questo dispositivo finché non li esporti.</div>
-<section class="panel history"><strong>Ultimi round salvati</strong><div id="history"></div></section>
-</main>
+
 <script>
 const codes=["PP01","PP02","PP03","PP04","PP05","PP06"];
 const labels=["Schiva","Recupera","Avanza","Passa","Sceglie","Presa"];
 let counts=Array.from({length:3},()=>Array(6).fill(0));
 let undoStack=[];
 const $=id=>document.getElementById(id);
-const storeKey="sm_obs_rounds_v1";
+const storeKey="sm_obs_rounds_v2";
+const oldStoreKey="sm_obs_rounds_v1";
+function getPlayerCode(p){const el=$("player"+p);return el?el.value.trim():""}
 function renderGrid(){
- const g=$("grid"); g.innerHTML="";
- const heads=["Giocatore",...codes.map((c,i)=>`${c}<br><span style='font-weight:600'>${labels[i]}</span>`)];
+ const currentPlayers=[0,1,2].map(p=>getPlayerCode(p)||localStorage.getItem('sm_player_'+p)||'');
+ const g=$("grid");g.innerHTML="";
+ const heads=["Giocatore",...codes.map((c,i)=>`${c}<br><span style='font-weight:650'>${labels[i]}</span>`)];
  heads.forEach(h=>{const d=document.createElement("div");d.className="head";d.innerHTML=h;g.appendChild(d)});
  for(let p=0;p<3;p++){
-   const player=document.createElement("div");player.className="cell player";
-   player.innerHTML=`<input id="player${p}" aria-label="Codice giocatore ${p+1}" placeholder="Codice ${p+1}" value="${localStorage.getItem('sm_player_'+p)||''}">`;
+   const player=document.createElement("div");player.className="player-cell";
+   player.innerHTML=`<input id="player${p}" aria-label="Codice giocatore ${p+1}" placeholder="Codice ${p+1}" value="${currentPlayers[p]}">`;
    g.appendChild(player);
    for(let c=0;c<6;c++){
      const b=document.createElement("button");b.className="tap";b.type="button";b.dataset.p=p;b.dataset.c=c;
-     b.innerHTML=`<span class="count">${counts[p][c]}</span><span class="plus">tocca +1</span>`;
+     b.innerHTML=`<span class="count">${counts[p][c]}</span><span class="plus">+1</span>`;
      b.addEventListener("click",()=>inc(p,c));g.appendChild(b);
    }
  }
- for(let p=0;p<3;p++) $("player"+p).addEventListener("change",e=>localStorage.setItem('sm_player_'+p,e.target.value.trim()));
+ for(let p=0;p<3;p++) $("player"+p).addEventListener("change",e=>{localStorage.setItem('sm_player_'+p,e.target.value.trim());renderSummary()});
+ renderSummary();
 }
-function inc(p,c){counts[p][c]++;undoStack.push([p,c]);renderGrid()}
-function undo(){const x=undoStack.pop();if(!x)return;counts[x[0]][x[1]]=Math.max(0,counts[x[0]][x[1]]-1);renderGrid()}
-function resetRound(){if(!confirm("Azzero tutti i conteggi del round corrente?"))return;counts=Array.from({length:3},()=>Array(6).fill(0));undoStack=[];renderGrid();setStatus("Round azzerato.")}
-function loadRounds(){try{return JSON.parse(localStorage.getItem(storeKey)||"[]")}catch{return []}}
+function inc(p,c){counts[p][c]++;undoStack.push([p,c]);renderGrid();$("lastEvent").textContent=`Ultimo evento: ${getPlayerCode(p)||('Giocatore '+(p+1))} · ${codes[c]} ${labels[c]}`}
+function undo(){const x=undoStack.pop();if(!x)return;counts[x[0]][x[1]]=Math.max(0,counts[x[0]][x[1]]-1);renderGrid();$("lastEvent").textContent="Ultimo evento annullato."}
+function resetRound(){if(!confirm("Azzero tutti i conteggi e le note del round corrente?"))return;counts=Array.from({length:3},()=>Array(6).fill(0));undoStack=[];[1,2,3].forEach(n=>$("nota"+n).value="");renderGrid();setStatus("Round azzerato.")}
+function loadRounds(){try{const v2=JSON.parse(localStorage.getItem(storeKey)||"[]");if(v2.length)return v2;return JSON.parse(localStorage.getItem(oldStoreKey)||"[]")}catch{return []}}
 function saveRound(){
  const players=[0,1,2].map(i=>$("player"+i).value.trim());
  if(players.some(x=>!x)){setStatus("Inserisci i tre codici giocatore prima di salvare.",true);return}
- const rec={id:Date.now(),timestamp:new Date().toISOString(),classe:$("classe").value.trim(),attivita:$("attivita").value,round:Number($("round").value)||1,squadra:$("squadra").value.trim(),players:players.map((code,p)=>({code,counts:[...counts[p]]}))};
+ const rec={id:Date.now(),timestamp:new Date().toISOString(),classe:$("classe").value.trim(),attivita:$("attivita").value,round:Number($("round").value)||1,squadra:$("squadra").value.trim(),notes:[$("nota1").value.trim(),$("nota2").value.trim(),$("nota3").value.trim()],players:players.map((code,p)=>({code,counts:[...counts[p]]}))};
  const arr=loadRounds();arr.push(rec);localStorage.setItem(storeKey,JSON.stringify(arr));
- $("round").value=(Number($("round").value)||1)+1;counts=Array.from({length:3},()=>Array(6).fill(0));undoStack=[];renderGrid();renderHistory();setStatus("Round salvato sul dispositivo.")
+ $("round").value=(Number($("round").value)||1)+1;counts=Array.from({length:3},()=>Array(6).fill(0));undoStack=[];[1,2,3].forEach(n=>$("nota"+n).value="");renderGrid();renderHistory();syncSession();setStatus("Round salvato sul dispositivo.")
 }
 function exportCSV(){
  const arr=loadRounds();if(!arr.length){setStatus("Non ci sono round salvati da esportare.",true);return}
- const rows=[["timestamp","classe","attivita","round","squadra","giocatore",...codes]];
- arr.forEach(r=>r.players.forEach(p=>rows.push([r.timestamp,r.classe,r.attivita,r.round,r.squadra,p.code,...p.counts])));
+ const rows=[["timestamp","classe","attivita","round","squadra","giocatore",...codes,"nota1","nota2","nota3"]];
+ arr.forEach(r=>r.players.forEach(p=>rows.push([r.timestamp,r.classe,r.attivita,r.round,r.squadra,p.code,...p.counts,...(r.notes||["","",""])])));
  const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';
  const csv=rows.map(r=>r.map(esc).join(';')).join('\n');
  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`osservazioni_sm_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);setStatus("CSV esportato.")
 }
-function renderHistory(){const arr=loadRounds().slice(-8).reverse();if(!arr.length){$("history").innerHTML="<p>Nessun round salvato.</p>";return}let h="<table><tr><th>Classe</th><th>Round</th><th>Squadra</th><th>Giocatori</th></tr>";arr.forEach(r=>h+=`<tr><td>${r.classe||'—'}</td><td>${r.round}</td><td>${r.squadra||'—'}</td><td>${r.players.map(p=>p.code).join(', ')}</td></tr>`);$("history").innerHTML=h+"</table>"}
-function setStatus(t,err=false){$("status").textContent=t;$("status").style.color=err?"#a13d2d":"#667085"}
+function renderHistory(){const arr=loadRounds().slice(-8).reverse();if(!arr.length){$("history").innerHTML="<p>Nessun round salvato.</p>";return}let h="<table><tr><th>Classe</th><th>Round</th><th>Squadra</th><th>Giocatori</th><th>Note</th></tr>";arr.forEach(r=>h+=`<tr><td>${r.classe||'—'}</td><td>${r.round}</td><td>${r.squadra||'—'}</td><td>${r.players.map(p=>p.code).join(', ')}</td><td>${(r.notes||[]).filter(Boolean).length}</td></tr>`);$("history").innerHTML=h+"</table>"}
+function renderSummary(){
+ const totals=counts.map(row=>row.reduce((a,b)=>a+b,0));
+ $("roundTotal").textContent=totals.reduce((a,b)=>a+b,0);
+ $("playerTotals").innerHTML=totals.map((t,i)=>`<div class="mini"><b>${t}</b><span>${getPlayerCode(i)||('G'+(i+1))}</span></div>`).join('');
+}
+function syncSession(){const c=$("classe").value.trim()||"—";$("sideSession").textContent=`Classe ${c} · Round ${Number($("round").value)||1}`;$("sideActivity").textContent=$("attivita").value}
+function setStatus(t,err=false){$("status").textContent=t;$("status").style.color=err?"#991b1b":"#64748b"}
 $("undo").onclick=undo;$("reset").onclick=resetRound;$("save").onclick=saveRound;$("csv").onclick=exportCSV;
-["classe","squadra"].forEach(id=>{const el=$(id);el.value=localStorage.getItem('sm_'+id)||'';el.addEventListener('change',()=>localStorage.setItem('sm_'+id,el.value.trim()))});
+["classe","squadra"].forEach(id=>{const el=$(id);el.value=localStorage.getItem('sm_'+id)||'';el.addEventListener('change',()=>{localStorage.setItem('sm_'+id,el.value.trim());syncSession()})});
+["round","attivita"].forEach(id=>$(id).addEventListener('change',syncSession));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
-renderGrid();renderHistory();
+renderGrid();renderHistory();syncSession();
 </script>
 </body>
 </html>
