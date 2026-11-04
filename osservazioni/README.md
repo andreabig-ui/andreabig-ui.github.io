@@ -23,3 +23,17 @@ Questa cartella contiene la PWA per le osservazioni rapide in palestra.
 `https://andreabig-ui.github.io/osservazioni/`
 
 Il progetto esistente dei giochi nella radice del repository non viene modificato.
+
+
+## Ukemi · tre fasi e raccolta dei colleghi
+
+Aprire `ukemi.html` oppure una fase direttamente:
+- `ukemi.html?fase=1`: avviamento motorio, 3 criteri
+- `ukemi.html?fase=2`: sbilanciamento e rullaggio indietro, 5 criteri
+- `ukemi.html?fase=3`: mae ukemi, 8 criteri
+
+Scala comune 0/1/2, N/O distinto da zero e vuoto. Anno scolastico, classe, numero di registro, docente, data e rilevazione collegano le tre fasi. Salvataggio locale, copie JSON, esportazione CSV, importazione delle copie dei colleghi e statistiche con deduplicazione.
+
+Per la raccolta in un unico archivio riservato, aprire `ukemi-attivazione.html`. Il registro Apps Script e le istruzioni sono in `ukemi-backend/`. L'attivazione Google è necessaria per la sincronizzazione fra dispositivi: GitHub Pages da solo non riceve le risposte dei colleghi. I risultati non vanno committati nel repository pubblico.
+
+Verifiche: dalla radice `node tests/build-backend.cjs` e `node tests/ukemi.test.cjs`.
