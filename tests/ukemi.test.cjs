@@ -37,3 +37,9 @@ assert.throws(()=>context.apiSave({token:'teacher-test-key',batch:{...batch,reco
 assert.throws(()=>context.apiRead({token:'teacher-test-key'}));assert.equal(context.apiRead({token:'admin-test-key'}).records.length,1);
 context.apiSave({token:'teacher-test-key',batch:{...batch,submissionId:'submission00002',records:[changed]}});assert.equal(rows.length,3);assert.equal(context.apiRead({token:'admin-test-key'}).records.length,1);assert.equal(context.apiRead({token:'admin-test-key'}).records[0].values.AV01,2);
 console.log('PASS: criteri, valori mancanti, deduplicazione, statistiche, autenticazione, invii e lettura riservata.');
+// Anche il pacchetto da incollare nell'editor deve conservare i caratteri JS letterali.
+const generated=fs.readFileSync('osservazioni/ukemi-backend/Ukemi.html','utf8');
+for(const match of generated.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);
+assert.ok(generated.includes(fs.readFileSync('osservazioni/ukemi-core.js','utf8')));
+new vm.Script(fs.readFileSync('osservazioni/ukemi-backend/UkemiRegistro.gs','utf8'));
+console.log('PASS: interfaccia condivisa incorporata e file unico installabile.');

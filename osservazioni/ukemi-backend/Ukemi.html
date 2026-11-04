@@ -87,7 +87,7 @@ const a=latest.filter(r=>r.phase===p.id&&r.participation==='presente');const cou
 const assessed=counts.reduce((s,v)=>s+v,0);return {phase:p.id,id:c[0],label:c[1],counts,no,blank,assessed,autonomous:assessed?counts[2]/assessed:null};}));
 return {latest,pupils:pupils.size,withScores:withScores.size,classCount:classes.size,expected:[...classes.values()].reduce((s,v)=>s+v,0),criteria};
 }
-function csv(rows){const q=v=>'"'+String(v??'').replace(/^[=+@-]/,"'<script src="ukemi-core.js"></script>").replaceAll('"','""')+'"';return '\ufeff'+rows.map(r=>r.map(q).join(';')).join('\r\n');}
+function csv(rows){const q=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';return '\ufeff'+rows.map(r=>r.map(q).join(';')).join('\r\n');}
 function recordsCSV(records){return csv([['anno_scolastico','classe','registro','data','rilevazione','docente','fase','partecipazione','criterio','livello','descrizione','id_osservazione'],...mergeRecords(records).flatMap(r=>Object.entries(r.values).map(([id,v])=>[r.schoolYear,r.classCode,r.student,r.lessonDate,r.attempt,r.observer,r.phase,r.participation,id,v===null?'':v,v===null?'Non compilato':LABELS[v],r.id]))]);}
 return {VERSION,PHASES,ALL_IDS,VALUES,LABELS,validateRecord,mergeRecords,latestRecords,statistics,csv,recordsCSV};
 });
