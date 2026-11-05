@@ -66,5 +66,5 @@ try{$('webAppUrl').value=localStorage.getItem('sm_ukemi_endpoint')||'';}catch{}
 if(hosted){$('backLink').href='https://andreabig-ui.github.io/osservazioni/';$('backLink').target='_top';$('capLink').href='https://andreabig-ui.github.io/osservazioni/capovolta.html';$('capLink').target='_top';}
 setForm(db.meta);syncIdentity();const requested=Number(window.UKEMI_INITIAL_PHASE||new URLSearchParams(location.search).get('fase')||1);selectPhase([1,2,3].includes(requested)?requested-1:0);
 if(hosted)$('settings').showModal();
-if(!hosted&&'serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+if(!hosted&&location.pathname.startsWith('/osservazioni/')&&'serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 })();

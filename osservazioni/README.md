@@ -37,3 +37,9 @@ Scala comune 0/1/2, N/O distinto da zero e vuoto. Anno scolastico, classe, numer
 Per la raccolta in un unico archivio riservato, aprire `ukemi-attivazione.html`. Il registro Apps Script e le istruzioni sono in `ukemi-backend/`. L'attivazione Google è necessaria per la sincronizzazione fra dispositivi: GitHub Pages da solo non riceve le risposte dei colleghi. I risultati non vanno committati nel repository pubblico.
 
 Verifiche: dalla radice `node tests/build-backend.cjs` e `node tests/ukemi.test.cjs`.
+
+## Ingresso aggiornato (5 novembre 2026)
+
+Usare `https://andreabig-ui.github.io/ukemi/` e le query `?fase=1`, `?fase=2`, `?fase=3`. La pagina di attivazione è `/ukemi/attivazione.html`. Questo ingresso è fuori dall’ambito del vecchio service worker di palla prigioniera, che poteva mostrare l’indice al posto di una pagina non caricata. La versione v7 recupera soltanto la pagina richiesta e non ripiega più su un’altra attività. Nessun dato di localStorage viene cancellato.
+
+Verifica del caricamento offline: `node tests/ukemi-routing.test.cjs`.
