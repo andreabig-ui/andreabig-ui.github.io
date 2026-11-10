@@ -19,6 +19,14 @@ const absent=r({id:'record000003',student:2,participation:'assente',values:{AV01
 stat=C.statistics([base,absent]);assert.equal(stat.pupils,2);assert.equal(stat.withScores,1);assert.equal(stat.criteria[0].assessed,1);
 const otherPhase=r({id:'record000004',classCode:'1B',phase:'indietro',classSize:20,values:{IN01:2,IN02:2,IN03:2,IN04:2,IN05:'NO'}});
 stat=C.statistics([base,otherPhase],{phase:'avviamento'});assert.equal(stat.expected,45);assert.equal(stat.classCount,2);assert.equal(stat.withScores,1);
+const previousBackward={...otherPhase,id:'record000006',rubricVersion:'ukemi-1.0',values:{...otherPhase.values,IN03:0}};
+stat=C.statistics([previousBackward,otherPhase],{phase:'indietro'});
+assert.equal(stat.withScores,1);
+assert.deepEqual(stat.criteria.filter(c=>c.id==='IN03').map(c=>[c.label,c.counts]),[
+  ['Seduta senza rumore',[0,0,1]],
+  ['Rullaggio laterale (griglia precedente)',[1,0,0]]
+]);
+assert.match(C.recordsCSV([previousBackward,otherPhase]),/"record000006";"ukemi-1.0"/);
 const noLater=r({id:'record000005',lessonDate:'2026-11-06',values:{AV01:'NO',AV02:'NO',AV03:'NO'}});
 assert.equal(C.statistics([base,noLater]).withScores,0);
 assert.match(C.recordsCSV([base]),/"0";"Da acquisire"/);assert.match(C.recordsCSV([base]),/"NO";"Non osservato"/);assert.match(C.csv([['=cmd']]),/'=cmd/);

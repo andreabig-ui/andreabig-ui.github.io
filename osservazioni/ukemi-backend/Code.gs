@@ -1,5 +1,4 @@
 /* Registro Ukemi. Configurazione e chiavi restano nelle proprietà dello script. */
-const UKEMI_VERSION_ = 'ukemi-1.0';
 const HEADERS_ = ['id_invio','ricevuto_il','docente_autenticato','schede_json'];
 
 // Eseguire UNA VOLTA dall'editor Apps Script con l'account scolastico.
@@ -38,7 +37,7 @@ function apiLogin(arg){const who=auth_(arg);return {id:who.id,role:who.role};}
 function core_(){return UkemiCore;}
 function book_(){const id=PropertiesService.getScriptProperties().getProperty('UKEMI_SHEET_ID');if(!id)throw Error('Il coordinatore deve inizializzare il registro.');return SpreadsheetApp.openById(id);}
 function validateBatch_(batch,who){
-  if(!batch||batch.rubricVersion!==UKEMI_VERSION_||!Array.isArray(batch.records)||batch.records.length<1||batch.records.length>40)throw Error('Invio non valido (massimo 40 schede).');
+  if(!batch||!core_().isSupportedVersion(batch.rubricVersion)||!Array.isArray(batch.records)||batch.records.length<1||batch.records.length>40)throw Error('Invio non valido (massimo 40 schede).');
   if(typeof batch.submissionId!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(batch.submissionId))throw Error('Identificativo invio non valido.');
   const core=core_(),ids=new Set();
   return batch.records.map(input=>{

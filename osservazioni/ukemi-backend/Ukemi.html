@@ -20,19 +20,22 @@
 <script>/*HOST_CONFIG*/</script><script>/* Criteri condivisi da interfaccia, statistiche e verifiche. Nessun dato degli alunni. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.UkemiCore=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='ukemi-1.0';
+const LEGACY_VERSION='ukemi-1.0';
+const VERSION='ukemi-1.1';
+const isSupportedVersion=v=>v===VERSION||v===LEGACY_VERSION;
+const isLegacyBackward=r=>r.phase==='indietro'&&r.rubricVersion===LEGACY_VERSION;
 const PHASES=[
 {id:'avviamento',title:'Avviamento motorio',short:'1 · Avviamento',criteria:[
 ['AV01','Respiro e braccia','Coordina il movimento delle braccia con una respirazione regolare, senza trattenere l’aria.'],
 ['AV02','Mobilità controllata','Esegue la sequenza di mobilità con appoggi stabili, gradualità e ampiezza personale controllata.'],
 ['AV03','Orecchio e spalla','Mantiene il riferimento del telefono fra orecchio e spalla, distinguendo l’orecchio dalla guancia.']
 ]},
-{id:'indietro',title:'Sbilanciamento e rullaggio indietro',short:'2 · Indietro',criteria:[
-['IN01','Palmo intero','Accompagna la discesa poggiando l’intero palmo, senza affidarsi alle sole dita.'],
-['IN02','Mano visibile','Mantiene lo sguardo sulla mano di appoggio durante il rullaggio.'],
-['IN03','Rullaggio laterale','Rulla sulla parte laterale della schiena, con discesa continua e senza urti sul sacro o sulla linea vertebrale.'],
-['IN04','Telefono stabile','Conserva la posizione orecchio–spalla durante il rullaggio, senza caricare testa o collo.'],
-['IN05','Piede opposto','Nella fase conclusiva cerca il terreno dietro la testa con il piede opposto alla spalla del telefono, entro l’ampiezza controllabile.']
+{id:'indietro',title:'Preparazione a ushiro ukemi · partenza in piedi',short:'2 · Ushiro ukemi',criteria:[
+['IN01','Raccolta e appoggio','Dalla stazione eretta raccoglie gli arti inferiori, flettendo anche e ginocchia, e poggia l’intero palmo a terra.'],
+['IN02','Sguardo sul palmo','Dall’appoggio e per tutto il rullaggio tiene lo sguardo fisso sulla mano a terra.'],
+['IN03','Seduta senza rumore','Accompagna il bacino fino alla posizione seduta, senza urto né rumore di impatto.'],
+['IN04','Rullaggio e telefono','Rulla sul lato della schiena. Mantiene il “telefono” tra orecchio e spalla dal lato della mano in appoggio e continua a guardare quella mano.'],
+['IN05','Piede opposto e ritorno','Tocca il materassino dietro la testa con il piede opposto al lato del telefono, poi torna alla seduta con controllo.']
 ]},
 {id:'avanti',title:'Mae ukemi · preparazione e rotolamento',short:'3 · Mae ukemi',criteria:[
 ['MA01','Quadrato iniziale','Dispone mani e ginocchia in un quadrato regolare e stabile.'],
@@ -45,13 +48,20 @@ const PHASES=[
 ['MA08','Rotolamento controllato','Supera gradualmente la base d’appoggio e accompagna il rotolamento senza precipitarsi o ricevere spinte.']
 ]}
 ];
+const LEGACY_BACKWARD_CRITERIA=[
+['IN01','Palmo intero','Accompagna la discesa poggiando l’intero palmo, senza affidarsi alle sole dita.'],
+['IN02','Mano visibile','Mantiene lo sguardo sulla mano di appoggio durante il rullaggio.'],
+['IN03','Rullaggio laterale','Rulla sulla parte laterale della schiena, con discesa continua e senza urti sul sacro o sulla linea vertebrale.'],
+['IN04','Telefono stabile','Conserva la posizione orecchio–spalla durante il rullaggio, senza caricare testa o collo.'],
+['IN05','Piede opposto','Nella fase conclusiva cerca il terreno dietro la testa con il piede opposto alla spalla del telefono, entro l’ampiezza controllabile.']
+];
 const VALUES=[null,'NO',0,1,2];
 const LABELS={'0':'Da acquisire','1':'Con richiamo','2':'Autonomo','NO':'Non osservato'};
 const ALL_IDS=PHASES.flatMap(p=>p.criteria.map(c=>c[0]));
 function assert(v,m){if(!v)throw new Error(m);}
 function validateRecord(r){
 assert(r&&typeof r==='object','Osservazione mancante.');
-assert(r.rubricVersion===VERSION,'Versione dei criteri non compatibile.');
+assert(isSupportedVersion(r.rubricVersion),'Versione dei criteri non compatibile.');
 for(const k of ['id','sessionId'])assert(typeof r[k]==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(r[k]),'Identificativo non valido.');
 assert(/^\d{4}-\d{2}$/.test(r.schoolYear),'Anno scolastico non valido.');
 const yy=Number(r.schoolYear.slice(0,4));assert(r.schoolYear.slice(5)===String((yy+1)%100).padStart(2,'0'),'Anno scolastico incoerente.');
@@ -75,7 +85,7 @@ function mergeRecords(...groups){const map=new Map();for(const r0 of groups.flat
 function latestRecords(records,filter={}){
 const map=new Map();for(const r of mergeRecords(records)){
 if(filter.schoolYear&&r.schoolYear!==filter.schoolYear||filter.classCode&&r.classCode!==filter.classCode||filter.phase&&r.phase!==filter.phase)continue;
-const key=[r.schoolYear,r.classCode,r.student,r.phase].join('|');const old=map.get(key);
+const key=[r.schoolYear,r.classCode,r.student,r.phase,isLegacyBackward(r)].join('|');const old=map.get(key);
 const order=x=>[x.lessonDate,String(x.attempt).padStart(3,'0'),x.modifiedAt,x.id].join('|');
 if(!old||order(r)>order(old))map.set(key,r);
 }return [...map.values()];}
@@ -83,14 +93,17 @@ function statistics(records,filter={}){
 const valid=mergeRecords(records);const latest=latestRecords(valid,filter);const pupils=new Set();const withScores=new Set();const classes=new Map();
 for(const r of latest){const key=[r.schoolYear,r.classCode,r.student].join('|');pupils.add(key);classes.set(r.schoolYear+'|'+r.classCode,Math.max(classes.get(r.schoolYear+'|'+r.classCode)||0,r.classSize));if(r.participation==='presente'&&Object.values(r.values).some(v=>typeof v==='number'))withScores.add(key);}
 const roster=latestRecords(valid,{schoolYear:filter.schoolYear,classCode:filter.classCode});classes.clear();const rosterLatest=new Map();for(const r of roster){const k=r.schoolYear+'|'+r.classCode;const old=rosterLatest.get(k);if(!old||r.lessonDate+'|'+String(r.attempt).padStart(3,'0')+'|'+r.modifiedAt>old.lessonDate+'|'+String(old.attempt).padStart(3,'0')+'|'+old.modifiedAt)rosterLatest.set(k,r);}for(const [k,r] of rosterLatest)classes.set(k,r.classSize);
-const criteria=PHASES.filter(p=>!filter.phase||p.id===filter.phase).flatMap(p=>p.criteria.map(c=>{
-const a=latest.filter(r=>r.phase===p.id&&r.participation==='presente');const counts=[0,0,0];let no=0,blank=0;for(const r of a){const v=r.values[c[0]];if(typeof v==='number')counts[v]++;else if(v==='NO')no++;else blank++;}
-const assessed=counts.reduce((s,v)=>s+v,0);return {phase:p.id,id:c[0],label:c[1],counts,no,blank,assessed,autonomous:assessed?counts[2]/assessed:null};}));
+const phases=PHASES.filter(p=>!filter.phase||p.id===filter.phase);
+const rubrics=phases.map(p=>({...p,legacy:false}));
+if(phases.some(p=>p.id==='indietro')&&latest.some(isLegacyBackward))rubrics.push({id:'indietro',criteria:LEGACY_BACKWARD_CRITERIA,legacy:true});
+const criteria=rubrics.flatMap(p=>p.criteria.map(c=>{
+const a=latest.filter(r=>r.phase===p.id&&isLegacyBackward(r)===p.legacy&&r.participation==='presente');const counts=[0,0,0];let no=0,blank=0;for(const r of a){const v=r.values[c[0]];if(typeof v==='number')counts[v]++;else if(v==='NO')no++;else blank++;}
+const assessed=counts.reduce((s,v)=>s+v,0);return {phase:p.id,id:c[0],label:p.legacy?c[1]+' (griglia precedente)':c[1],rubricVersion:p.legacy?LEGACY_VERSION:VERSION,counts,no,blank,assessed,autonomous:assessed?counts[2]/assessed:null};}));
 return {latest,pupils:pupils.size,withScores:withScores.size,classCount:classes.size,expected:[...classes.values()].reduce((s,v)=>s+v,0),criteria};
 }
 function csv(rows){const q=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';return '\ufeff'+rows.map(r=>r.map(q).join(';')).join('\r\n');}
-function recordsCSV(records){return csv([['anno_scolastico','classe','registro','data','rilevazione','docente','fase','partecipazione','criterio','livello','descrizione','id_osservazione'],...mergeRecords(records).flatMap(r=>Object.entries(r.values).map(([id,v])=>[r.schoolYear,r.classCode,r.student,r.lessonDate,r.attempt,r.observer,r.phase,r.participation,id,v===null?'':v,v===null?'Non compilato':LABELS[v],r.id]))]);}
-return {VERSION,PHASES,ALL_IDS,VALUES,LABELS,validateRecord,mergeRecords,latestRecords,statistics,csv,recordsCSV};
+function recordsCSV(records){return csv([['anno_scolastico','classe','registro','data','rilevazione','docente','fase','partecipazione','criterio','livello','descrizione','id_osservazione','versione_criteri'],...mergeRecords(records).flatMap(r=>Object.entries(r.values).map(([id,v])=>[r.schoolYear,r.classCode,r.student,r.lessonDate,r.attempt,r.observer,r.phase,r.participation,id,v===null?'':v,v===null?'Non compilato':LABELS[v],r.id,r.rubricVersion]))]);}
+return {VERSION,isSupportedVersion,isLegacyBackward,PHASES,ALL_IDS,VALUES,LABELS,validateRecord,mergeRecords,latestRecords,statistics,csv,recordsCSV};
 });
 </script><script>(function(){'use strict';
 const C=window.UkemiCore,$=id=>document.getElementById(id),KEY='sm_ukemi_v1';
@@ -106,7 +119,8 @@ try{const raw=localStorage.getItem(KEY);if(raw){const old=JSON.parse(raw);if(!Ar
 function rpc(name,arg){return new Promise((resolve,reject)=>{google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(Error(e.message||'Registro non raggiungibile.')))[name](arg);});}
 function readMeta(){return {schoolYear:$('year').value.trim(),classCode:$('classCode').value.trim().toUpperCase(),lessonDate:$('date').value,attempt:Number($('attempt').value),classSize:Number($('size').value),observer:$('observer').value.trim().toUpperCase()};}
 function setForm(m){for(const [id,k] of [['year','schoolYear'],['classCode','classCode'],['date','lessonDate'],['attempt','attempt'],['observer','observer'],['size','classSize']])$(id).value=m[k];}
-function blankRecord(s,student,p){return {id:s.id+'_'+p.id+'_'+student,sessionId:s.id,rubricVersion:C.VERSION,...s.meta,student,participation:'presente',phase:p.id,values:Object.fromEntries(p.criteria.map(c=>[c[0],null])),modifiedAt:new Date().toISOString()};}
+function recordId(s,student,p){return s.id+(p.id==='indietro'?'_v11':'')+'_'+p.id+'_'+student;}
+function blankRecord(s,student,p){return {id:recordId(s,student,p),sessionId:s.id,rubricVersion:C.VERSION,...s.meta,student,participation:'presente',phase:p.id,values:Object.fromEntries(p.criteria.map(c=>[c[0],null])),modifiedAt:new Date().toISOString()};}
 function validateMeta(m){C.validateRecord(blankRecord({id:'validation000',meta:m},1,C.PHASES[0]));}
 function matchesMeta(a,b){return ['schoolYear','classCode','lessonDate','attempt','observer'].every(k=>a[k]===b[k]);}
 function editSession(){$('sessionError').textContent='';$('classSetup').scrollIntoView({behavior:'smooth',block:'center'});$('classCode').focus({preventScroll:true});}
@@ -114,8 +128,8 @@ function openSession(){if(!$('sessionForm').reportValidity())return;try{const m=
 let found=db.sessions.find(s=>matchesMeta(s.meta,m));
 if(found&&found.meta.classSize!==m.classSize){const affected=db.records.some(r=>r.sessionId===found.id&&r.student>m.classSize);if(affected)throw Error('La riduzione escluderebbe alunni già osservati. Mantieni la numerosità attuale.');found.meta.classSize=m.classSize;for(const r of db.records.filter(r=>r.sessionId===found.id)){r.classSize=m.classSize;r.modifiedAt=new Date().toISOString();}}
 if(!found){found={id:uid(),meta:m};db.sessions.push(found);}session=found;db.meta=m;undo=[];persist();renderGrid();$('startGrid').textContent='APRI / AGGIORNA GRIGLIA';requestAnimationFrame(()=>{$('workspace').scrollIntoView({behavior:'smooth',block:'start'});const first=$('grid').querySelector('tbody select');if(first)first.focus({preventScroll:true});});say('Griglia pronta: scegli 0, 1, 2 o N/O nelle righe degli alunni.');}catch(e){$('sessionError').textContent=e.message;say(e.message,true);}}
-function currentRecord(student,p=C.PHASES[phase]){return db.records.find(r=>r.id===session.id+'_'+p.id+'_'+student);}
-function updateRecord(student,fn){if(!session)return;let r=currentRecord(student);undo.push({id:session.id+'_'+C.PHASES[phase].id+'_'+student,before:r?JSON.parse(JSON.stringify(r)):null});if(!r){r=blankRecord(session,student,C.PHASES[phase]);db.records.push(r);}fn(r);r.modifiedAt=new Date().toISOString();if(persist())say('Modifica salvata sul dispositivo. Usa “Salva fase” per preparare l’invio.');renderSummary();}
+function currentRecord(student,p=C.PHASES[phase]){return db.records.find(r=>r.id===recordId(session,student,p));}
+function updateRecord(student,fn){if(!session)return;let r=currentRecord(student);undo.push({id:recordId(session,student,C.PHASES[phase]),before:r?JSON.parse(JSON.stringify(r)):null});if(!r){r=blankRecord(session,student,C.PHASES[phase]);db.records.push(r);}fn(r);r.modifiedAt=new Date().toISOString();if(persist())say('Modifica salvata sul dispositivo. Usa “Salva fase” per preparare l’invio.');renderSummary();}
 function option(value,label,selected){return `<option value="${value}"${selected?' selected':''}>${label}</option>`;}
 // Costruzione esplicita della tabella: intestazioni e righe usano lo stesso DOM.
 function buildUkemiTable(table,criteria,count,readRecord,onPresence,onValue){
@@ -154,10 +168,10 @@ function renderGrid(){
  if(session&&rows!==count)throw Error('Caricamento delle righe non riuscito. Riprova ad aprire la griglia.');
  renderSummary();
 }
-function renderSummary(){if(!session){$('liveSummary').textContent='Nessuna griglia aperta.';return;}const rows=db.records.filter(r=>r.sessionId===session.id&&r.phase===C.PHASES[phase].id),num=rows.filter(r=>r.participation==='presente'&&Object.values(r.values).some(v=>typeof v==='number')).length;const complete=rows.filter(r=>r.participation==='presente'&&Object.values(r.values).every(v=>v!==null)).length;const unobserved=rows.reduce((s,r)=>s+Object.values(r.values).filter(v=>v==='NO').length,0);const absent=rows.filter(r=>r.participation==='assente').length,non=rows.filter(r=>r.participation==='non_partecipa').length;$('liveSummary').innerHTML=`<p><b>${num}</b> alunni con livelli registrati</p><p><b>${complete}</b> schede senza celle vuote</p><p><b>${unobserved}</b> criteri N/O</p><p><b>${absent}</b> assenti · <b>${non}</b> non partecipanti</p><p><b>${db.pending.length}</b> invii in attesa</p>`;}
-function selectPhase(i){phase=i;document.querySelectorAll('#phases button').forEach((b,j)=>b.classList.toggle('active',j===i));$('statsTab').classList.remove('active');$('statistics').hidden=true;$('observation').hidden=false;const p=C.PHASES[i];$('title').textContent=p.short;$('phaseTitle').textContent=p.title;$('phaseIntro').textContent=['Respirazione, mobilità globale e posizione della testa.','Discesa accompagnata, sguardo sulla mano e percorso laterale.','Dal quadrato degli appoggi al rotolamento, dopo verifica dei prerequisiti.'][i];$('criteriaList').innerHTML=p.criteria.map(c=>`<div class="criterion"><b>${c[0]} · ${esc(c[1])}</b><span>${esc(c[2])}</span></div>`).join('');undo=[];renderGrid();if(!hosted){const url=new URL(location.href);url.searchParams.set('fase',String(i+1));history.replaceState(null,'',url);} }
+function renderSummary(){if(!session){$('liveSummary').textContent='Nessuna griglia aperta.';return;}const rows=db.records.filter(r=>r.sessionId===session.id&&r.phase===C.PHASES[phase].id&&!C.isLegacyBackward(r)),num=rows.filter(r=>r.participation==='presente'&&Object.values(r.values).some(v=>typeof v==='number')).length;const complete=rows.filter(r=>r.participation==='presente'&&Object.values(r.values).every(v=>v!==null)).length;const unobserved=rows.reduce((s,r)=>s+Object.values(r.values).filter(v=>v==='NO').length,0);const absent=rows.filter(r=>r.participation==='assente').length,non=rows.filter(r=>r.participation==='non_partecipa').length;$('liveSummary').innerHTML=`<p><b>${num}</b> alunni con livelli registrati</p><p><b>${complete}</b> schede senza celle vuote</p><p><b>${unobserved}</b> criteri N/O</p><p><b>${absent}</b> assenti · <b>${non}</b> non partecipanti</p><p><b>${db.pending.length}</b> invii in attesa</p>`;}
+function selectPhase(i){phase=i;document.querySelectorAll('#phases button').forEach((b,j)=>b.classList.toggle('active',j===i));$('statsTab').classList.remove('active');$('statistics').hidden=true;$('observation').hidden=false;const p=C.PHASES[i];$('title').textContent=p.short;$('phaseTitle').textContent=p.title;$('phaseIntro').textContent=['Respirazione, mobilità globale e posizione della testa.','Dalla raccolta in piedi alla seduta silenziosa, poi rullaggio, tocco e ritorno.','Dal quadrato degli appoggi al rotolamento, dopo verifica dei prerequisiti.'][i];$('criteriaList').innerHTML=p.criteria.map(c=>`<div class="criterion"><b>${c[0]} · ${esc(c[1])}</b><span>${esc(c[2])}</span></div>`).join('');undo=[];renderGrid();if(!hosted){const url=new URL(location.href);url.searchParams.set('fase',String(i+1));history.replaceState(null,'',url);} }
 function queueRecords(records){if(!records.length)throw Error('Nessuna osservazione da salvare.');const batch={submissionId:uid(),rubricVersion:C.VERSION,records:records.map(C.validateRecord)};db.pending.push(batch);if(!persist())throw Error('Invio non preparato: salvataggio locale non disponibile.');return batch;}
-function savePhase(){if(!session)return false;try{for(let n=1;n<=session.meta.classSize;n++){if(!currentRecord(n))db.records.push(blankRecord(session,n,C.PHASES[phase]));}queueRecords(db.records.filter(r=>r.sessionId===session.id&&r.phase===C.PHASES[phase].id));renderSummary();say(hosted?'Fase salvata. Ora puoi inviarla al registro condiviso.':'Fase salvata sul dispositivo. Esporta una copia o apri il registro condiviso per raccogliere i colleghi.');return true;}catch(e){say(e.message,true);return false;}}
+function savePhase(){if(!session)return false;try{for(let n=1;n<=session.meta.classSize;n++){if(!currentRecord(n))db.records.push(blankRecord(session,n,C.PHASES[phase]));}queueRecords(db.records.filter(r=>r.sessionId===session.id&&r.phase===C.PHASES[phase].id&&!C.isLegacyBackward(r)));renderSummary();say(hosted?'Fase salvata. Ora puoi inviarla al registro condiviso.':'Fase salvata sul dispositivo. Esporta una copia o apri il registro condiviso per raccogliere i colleghi.');return true;}catch(e){say(e.message,true);return false;}}
 async function sendPending(){if(busy)return;if(!hosted){$('settings').showModal();return;}if(!identity){$('settings').showModal();say('Accedi con la tua chiave per inviare.',true);return;}const mine=db.pending.filter(b=>b.records.every(r=>(identity.role==='admin'||r.observer===identity.id)));if(!mine.length){say('Nessun invio in attesa per questo docente. Salva prima la fase.');return;}busy=true;$('send').disabled=true;try{for(const batch of mine){const receipt=await rpc('apiSave',{token,batch});if(!receipt.ok||receipt.submissionId!==batch.submissionId)throw Error('Il registro non ha confermato questo invio.');db.pending=db.pending.filter(b=>b.submissionId!==batch.submissionId);persist();}say(`Registro aggiornato: ${mine.length} invii confermati. Gli invii ripetuti non duplicano i dati.`);}catch(e){say(`Invio non confermato: ${e.message} I dati restano in attesa e puoi riprovare.`,true);}finally{busy=false;$('send').disabled=!session;renderSummary();}}
 function download(name,text,type){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
 function allLocal(){return C.mergeRecords(db.records,db.imports);}
@@ -177,7 +191,7 @@ $('undo').onclick=()=>{const op=undo.pop();if(!op)return;db.records=db.records.f
 $('toggleSummary').onclick=()=>{const show=$('summaryPanel').hidden;$('summaryPanel').hidden=!show;$('workspace').classList.toggle('with-summary',show);$('toggleSummary').setAttribute('aria-expanded',String(show));$('toggleSummary').textContent=show?'Nascondi riepilogo':'Mostra riepilogo';};
 $('exportCSV').onclick=()=>download('ukemi_osservazioni.csv',C.recordsCSV(allLocal()),'text/csv;charset=utf-8');
 $('exportJSON').onclick=()=>download('ukemi_copia_'+today()+'.json',JSON.stringify({format:'sm-ukemi-backup-v1',rubricVersion:C.VERSION,records:allLocal()},null,2),'application/json');
-$('statsCSV').onclick=()=>{const s=getStats(),rows=[['criterio','fase','livello_0','livello_1','livello_2','osservati','non_osservati','vuoti','autonomi_percentuale'],...s.criteria.map(c=>[c.id,c.phase,...c.counts,c.assessed,c.no,c.blank,c.autonomous===null?'':(c.autonomous*100).toFixed(1)])];download('ukemi_statistiche.csv',C.csv(rows),'text/csv;charset=utf-8');};
+$('statsCSV').onclick=()=>{const s=getStats(),rows=[['criterio','fase','livello_0','livello_1','livello_2','osservati','non_osservati','vuoti','autonomi_percentuale','versione_criteri'],...s.criteria.map(c=>[c.id,c.phase,...c.counts,c.assessed,c.no,c.blank,c.autonomous===null?'':(c.autonomous*100).toFixed(1),c.rubricVersion])];download('ukemi_statistiche.csv',C.csv(rows),'text/csv;charset=utf-8');};
 $('sendImports').onclick=sendPending;$('sendImports').hidden=!hosted;$('importFiles').onchange=importFiles;$('refreshStats').onclick=refreshStats;$('openSettings').onclick=()=>$('settings').showModal();
 $('login').onclick=async()=>{try{const candidate=$('accessKey').value.trim();if(!candidate)throw Error('Inserisci la chiave personale.');identity=await rpc('apiLogin',{token:candidate});token=candidate;$('accessKey').value='';session=null;syncIdentity();renderGrid();$('loginResult').textContent=`Accesso riuscito: ${identity.id}${identity.role==='admin'?' · coordinatore':''}.`;}catch(e){$('loginResult').textContent='Accesso non riuscito: '+e.message;}};
 $('logout').onclick=()=>{token='';identity=null;remoteRecords=null;session=null;syncIdentity();renderGrid();populateFilters();renderStats();$('loginResult').textContent='Accesso chiuso.';};

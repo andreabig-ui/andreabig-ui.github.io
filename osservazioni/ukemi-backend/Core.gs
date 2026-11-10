@@ -1,18 +1,21 @@
 var UkemiCore = (function(){
 'use strict';
-const VERSION='ukemi-1.0';
+const LEGACY_VERSION='ukemi-1.0';
+const VERSION='ukemi-1.1';
+const isSupportedVersion=v=>v===VERSION||v===LEGACY_VERSION;
+const isLegacyBackward=r=>r.phase==='indietro'&&r.rubricVersion===LEGACY_VERSION;
 const PHASES=[
 {id:'avviamento',title:'Avviamento motorio',short:'1 · Avviamento',criteria:[
 ['AV01','Respiro e braccia','Coordina il movimento delle braccia con una respirazione regolare, senza trattenere l’aria.'],
 ['AV02','Mobilità controllata','Esegue la sequenza di mobilità con appoggi stabili, gradualità e ampiezza personale controllata.'],
 ['AV03','Orecchio e spalla','Mantiene il riferimento del telefono fra orecchio e spalla, distinguendo l’orecchio dalla guancia.']
 ]},
-{id:'indietro',title:'Sbilanciamento e rullaggio indietro',short:'2 · Indietro',criteria:[
-['IN01','Palmo intero','Accompagna la discesa poggiando l’intero palmo, senza affidarsi alle sole dita.'],
-['IN02','Mano visibile','Mantiene lo sguardo sulla mano di appoggio durante il rullaggio.'],
-['IN03','Rullaggio laterale','Rulla sulla parte laterale della schiena, con discesa continua e senza urti sul sacro o sulla linea vertebrale.'],
-['IN04','Telefono stabile','Conserva la posizione orecchio–spalla durante il rullaggio, senza caricare testa o collo.'],
-['IN05','Piede opposto','Nella fase conclusiva cerca il terreno dietro la testa con il piede opposto alla spalla del telefono, entro l’ampiezza controllabile.']
+{id:'indietro',title:'Preparazione a ushiro ukemi · partenza in piedi',short:'2 · Ushiro ukemi',criteria:[
+['IN01','Raccolta e appoggio','Dalla stazione eretta raccoglie gli arti inferiori, flettendo anche e ginocchia, e poggia l’intero palmo a terra.'],
+['IN02','Sguardo sul palmo','Dall’appoggio e per tutto il rullaggio tiene lo sguardo fisso sulla mano a terra.'],
+['IN03','Seduta senza rumore','Accompagna il bacino fino alla posizione seduta, senza urto né rumore di impatto.'],
+['IN04','Rullaggio e telefono','Rulla sul lato della schiena. Mantiene il “telefono” tra orecchio e spalla dal lato della mano in appoggio e continua a guardare quella mano.'],
+['IN05','Piede opposto e ritorno','Tocca il materassino dietro la testa con il piede opposto al lato del telefono, poi torna alla seduta con controllo.']
 ]},
 {id:'avanti',title:'Mae ukemi · preparazione e rotolamento',short:'3 · Mae ukemi',criteria:[
 ['MA01','Quadrato iniziale','Dispone mani e ginocchia in un quadrato regolare e stabile.'],
@@ -25,13 +28,20 @@ const PHASES=[
 ['MA08','Rotolamento controllato','Supera gradualmente la base d’appoggio e accompagna il rotolamento senza precipitarsi o ricevere spinte.']
 ]}
 ];
+const LEGACY_BACKWARD_CRITERIA=[
+['IN01','Palmo intero','Accompagna la discesa poggiando l’intero palmo, senza affidarsi alle sole dita.'],
+['IN02','Mano visibile','Mantiene lo sguardo sulla mano di appoggio durante il rullaggio.'],
+['IN03','Rullaggio laterale','Rulla sulla parte laterale della schiena, con discesa continua e senza urti sul sacro o sulla linea vertebrale.'],
+['IN04','Telefono stabile','Conserva la posizione orecchio–spalla durante il rullaggio, senza caricare testa o collo.'],
+['IN05','Piede opposto','Nella fase conclusiva cerca il terreno dietro la testa con il piede opposto alla spalla del telefono, entro l’ampiezza controllabile.']
+];
 const VALUES=[null,'NO',0,1,2];
 const LABELS={'0':'Da acquisire','1':'Con richiamo','2':'Autonomo','NO':'Non osservato'};
 const ALL_IDS=PHASES.flatMap(p=>p.criteria.map(c=>c[0]));
 function assert(v,m){if(!v)throw new Error(m);}
 function validateRecord(r){
 assert(r&&typeof r==='object','Osservazione mancante.');
-assert(r.rubricVersion===VERSION,'Versione dei criteri non compatibile.');
+assert(isSupportedVersion(r.rubricVersion),'Versione dei criteri non compatibile.');
 for(const k of ['id','sessionId'])assert(typeof r[k]==='string'&&/^[a-zA-Z0-9_-]{8,100}$/.test(r[k]),'Identificativo non valido.');
 assert(/^\d{4}-\d{2}$/.test(r.schoolYear),'Anno scolastico non valido.');
 const yy=Number(r.schoolYear.slice(0,4));assert(r.schoolYear.slice(5)===String((yy+1)%100).padStart(2,'0'),'Anno scolastico incoerente.');
@@ -55,7 +65,7 @@ function mergeRecords(...groups){const map=new Map();for(const r0 of groups.flat
 function latestRecords(records,filter={}){
 const map=new Map();for(const r of mergeRecords(records)){
 if(filter.schoolYear&&r.schoolYear!==filter.schoolYear||filter.classCode&&r.classCode!==filter.classCode||filter.phase&&r.phase!==filter.phase)continue;
-const key=[r.schoolYear,r.classCode,r.student,r.phase].join('|');const old=map.get(key);
+const key=[r.schoolYear,r.classCode,r.student,r.phase,isLegacyBackward(r)].join('|');const old=map.get(key);
 const order=x=>[x.lessonDate,String(x.attempt).padStart(3,'0'),x.modifiedAt,x.id].join('|');
 if(!old||order(r)>order(old))map.set(key,r);
 }return [...map.values()];}
@@ -63,13 +73,16 @@ function statistics(records,filter={}){
 const valid=mergeRecords(records);const latest=latestRecords(valid,filter);const pupils=new Set();const withScores=new Set();const classes=new Map();
 for(const r of latest){const key=[r.schoolYear,r.classCode,r.student].join('|');pupils.add(key);classes.set(r.schoolYear+'|'+r.classCode,Math.max(classes.get(r.schoolYear+'|'+r.classCode)||0,r.classSize));if(r.participation==='presente'&&Object.values(r.values).some(v=>typeof v==='number'))withScores.add(key);}
 const roster=latestRecords(valid,{schoolYear:filter.schoolYear,classCode:filter.classCode});classes.clear();const rosterLatest=new Map();for(const r of roster){const k=r.schoolYear+'|'+r.classCode;const old=rosterLatest.get(k);if(!old||r.lessonDate+'|'+String(r.attempt).padStart(3,'0')+'|'+r.modifiedAt>old.lessonDate+'|'+String(old.attempt).padStart(3,'0')+'|'+old.modifiedAt)rosterLatest.set(k,r);}for(const [k,r] of rosterLatest)classes.set(k,r.classSize);
-const criteria=PHASES.filter(p=>!filter.phase||p.id===filter.phase).flatMap(p=>p.criteria.map(c=>{
-const a=latest.filter(r=>r.phase===p.id&&r.participation==='presente');const counts=[0,0,0];let no=0,blank=0;for(const r of a){const v=r.values[c[0]];if(typeof v==='number')counts[v]++;else if(v==='NO')no++;else blank++;}
-const assessed=counts.reduce((s,v)=>s+v,0);return {phase:p.id,id:c[0],label:c[1],counts,no,blank,assessed,autonomous:assessed?counts[2]/assessed:null};}));
+const phases=PHASES.filter(p=>!filter.phase||p.id===filter.phase);
+const rubrics=phases.map(p=>({...p,legacy:false}));
+if(phases.some(p=>p.id==='indietro')&&latest.some(isLegacyBackward))rubrics.push({id:'indietro',criteria:LEGACY_BACKWARD_CRITERIA,legacy:true});
+const criteria=rubrics.flatMap(p=>p.criteria.map(c=>{
+const a=latest.filter(r=>r.phase===p.id&&isLegacyBackward(r)===p.legacy&&r.participation==='presente');const counts=[0,0,0];let no=0,blank=0;for(const r of a){const v=r.values[c[0]];if(typeof v==='number')counts[v]++;else if(v==='NO')no++;else blank++;}
+const assessed=counts.reduce((s,v)=>s+v,0);return {phase:p.id,id:c[0],label:p.legacy?c[1]+' (griglia precedente)':c[1],rubricVersion:p.legacy?LEGACY_VERSION:VERSION,counts,no,blank,assessed,autonomous:assessed?counts[2]/assessed:null};}));
 return {latest,pupils:pupils.size,withScores:withScores.size,classCount:classes.size,expected:[...classes.values()].reduce((s,v)=>s+v,0),criteria};
 }
 function csv(rows){const q=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';return '\ufeff'+rows.map(r=>r.map(q).join(';')).join('\r\n');}
-function recordsCSV(records){return csv([['anno_scolastico','classe','registro','data','rilevazione','docente','fase','partecipazione','criterio','livello','descrizione','id_osservazione'],...mergeRecords(records).flatMap(r=>Object.entries(r.values).map(([id,v])=>[r.schoolYear,r.classCode,r.student,r.lessonDate,r.attempt,r.observer,r.phase,r.participation,id,v===null?'':v,v===null?'Non compilato':LABELS[v],r.id]))]);}
-return {VERSION,PHASES,ALL_IDS,VALUES,LABELS,validateRecord,mergeRecords,latestRecords,statistics,csv,recordsCSV};
+function recordsCSV(records){return csv([['anno_scolastico','classe','registro','data','rilevazione','docente','fase','partecipazione','criterio','livello','descrizione','id_osservazione','versione_criteri'],...mergeRecords(records).flatMap(r=>Object.entries(r.values).map(([id,v])=>[r.schoolYear,r.classCode,r.student,r.lessonDate,r.attempt,r.observer,r.phase,r.participation,id,v===null?'':v,v===null?'Non compilato':LABELS[v],r.id,r.rubricVersion]))]);}
+return {VERSION,isSupportedVersion,isLegacyBackward,PHASES,ALL_IDS,VALUES,LABELS,validateRecord,mergeRecords,latestRecords,statistics,csv,recordsCSV};
 
 })();
